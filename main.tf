@@ -38,6 +38,14 @@ resource "aws_security_group" "sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -63,19 +71,31 @@ resource "aws_instance" "vm" {
     timeout     = "5m"
   }
 
-  provisioner "remote-exec" {
-    inline = [
-      # enable password auth
-      "sudo sed -i 's/^#\\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config",
-      "sudo sed -i 's/^#\\?KbdInteractiveAuthentication.*/KbdInteractiveAuthentication yes/' /etc/ssh/sshd_config",
-      "echo 'ubuntu:${var.ssh_password}' | sudo chpasswd",
-      "sudo systemctl restart ssh",
-      # create the file
-      "echo 'hello from terraform' > /home/ubuntu/hello.txt",
-      "hostname >> /home/ubuntu/hello.txt",
-      "date >> /home/ubuntu/hello.txt"
-    ]
-  }
+provisioner "remote-exec" {
+  inline = [
+    # enable password auth
+    "sudo sed -i 's/^#\\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config",
+    "sudo sed -i 's/^#\\?KbdInteractiveAuthentication.*/KbdInteractiveAuthentication yes/' /etc/ssh/sshd_config",
+    "echo 'ubuntu:${var.ssh_password}' | sudo chpasswd",
+    "sudo systemctl restart ssh",
+
+    "sudo apt install -y nginx",
+    "sudo systemctl enable nginx",
+    "sudo systemctl start nginx",
+    
+    "sudo tee /var/www/html/index.html > /dev/null <<'EOF'",
+    "<!DOCTYPE html>",
+    "<html>",
+    "  <head><title>My Terraform Server</title></head>",
+    "  <body>",
+    "    <h1>Hello from Terraform!</h1>",
+    "    <p>Hostname: $(hostname)</p>",
+    "    <p>Date: $(date)</p>",
+    "  </body>",
+    "</html>",
+    "EOF"
+  ]
+}
 
   tags = {
     Name = "terraform-demo"
@@ -84,8 +104,4 @@ resource "aws_instance" "vm" {
 
 output "public_ip" {
   value = aws_instance.vm.public_ip
-}
-
-output "ssh_command" {
-  value = "ssh ubuntu@${aws_instance.vm.public_ip}"
 }
