@@ -23,12 +23,12 @@ resource "tls_private_key" "key" {
 }
 
 resource "aws_key_pair" "key" {
-  key_name   = "terraform-demo-key102"
+  key_name   = "terraform-demo-key103"
   public_key = tls_private_key.key.public_key_openssh
 }
 
 resource "aws_security_group" "sg1" {
-  name        = "terraform-demo-sg"
+  name        = "terraform-demo-sg2"
   description = "Allow SSH"
 
   ingress {
@@ -60,7 +60,6 @@ resource "aws_instance" "vm" {
   key_name                    = aws_key_pair.key.key_name
   vpc_security_group_ids      = [aws_security_group.sg1.id]
   associate_public_ip_address = true
-
   depends_on = [aws_key_pair.key, aws_security_group.sg1]
 
   connection {
@@ -71,31 +70,28 @@ resource "aws_instance" "vm" {
     timeout     = "5m"
   }
 
-provisioner "remote-exec" {
-  inline = [
-    # enable password auth
-    "sudo sed -i 's/^#\\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config",
-    "sudo sed -i 's/^#\\?KbdInteractiveAuthentication.*/KbdInteractiveAuthentication yes/' /etc/ssh/sshd_config",
-    "echo 'ubuntu:${var.ssh_password}' | sudo chpasswd",
-    "sudo systemctl restart ssh",
-
-    "sudo apt install -y nginx",
-    "sudo systemctl enable nginx",
-    "sudo systemctl start nginx",
-    
-    "sudo tee /var/www/html/index.html > /dev/null <<'EOF'",
-    "<!DOCTYPE html>",
-    "<html>",
-    "  <head><title>My Terraform Server</title></head>",
-    "  <body>",
-    "    <h1>Hello from Terraform!</h1>",
-    "    <p>Hostname: $(hostname)</p>",
-    "    <p>Date: $(date)</p>",
-    "  </body>",
-    "</html>",
-    "EOF"
-  ]
-}
+  provisioner "remote-exec" {
+    inline = [
+      "sudo sed -i 's/^#\\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config",
+      "sudo sed -i 's/^#\\?KbdInteractiveAuthentication.*/KbdInteractiveAuthentication yes/' /etc/ssh/sshd_config",
+      "echo 'ubuntu:${var.ssh_password}' | sudo chpasswd",
+      "sudo systemctl restart ssh",
+      "sudo apt install -y nginx",
+      "sudo systemctl enable nginx",
+      "sudo systemctl start nginx",
+      "sudo tee /var/www/html/index.html > /dev/null <<'EOF'",
+      "<!DOCTYPE html>",
+      "<html>",
+      "  <head><title>My Terraform Server</title></head>",
+      "  <body>",
+      "    <h1>Hello from Terraform!</h1>",
+      "    <p>Hostname: $(hostname)</p>",
+      "    <p>Date: $(date)</p>",
+      "  </body>",
+      "</html>",
+      "EOF"
+    ]
+  }
 
   tags = {
     Name = "terraform-demo"
