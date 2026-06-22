@@ -27,7 +27,7 @@ resource "aws_key_pair" "key" {
   public_key = tls_private_key.key.public_key_openssh
 }
 
-resource "aws_security_group" "sg" {
+resource "aws_security_group" "sg1" {
   name        = "terraform-demo-sg"
   description = "Allow SSH"
 
@@ -58,10 +58,10 @@ resource "aws_instance" "vm" {
   ami                         = "ami-0aba19e56f3eaec05"
   instance_type               = "t3.micro"
   key_name                    = aws_key_pair.key.key_name
-  vpc_security_group_ids      = [aws_security_group.sg.id]
+  vpc_security_group_ids      = [aws_security_group.sg1.id]
   associate_public_ip_address = true
 
-  depends_on = [aws_key_pair.key, aws_security_group.sg]
+  depends_on = [aws_key_pair.key, aws_security_group.sg1]
 
   connection {
     type        = "ssh"
